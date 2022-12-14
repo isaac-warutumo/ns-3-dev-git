@@ -19,21 +19,47 @@ int
 main (int argc, char *argv[])
 {
   uint32_t ecmpMode = 2;
-  uint32_t socket = 0;
+  uint32_t socket = 1;
 
-  LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
-  LogComponentEnable("Ipv4GlobalRouting", LOG_ERROR);
-  LogComponentEnable("EcmpExample", LOG_ALL);
+  //input parameters
+  int no_relays = 2; //number of relays (2,10)
+  int relay_capacity = 10;//relay capacity range(2,50) Mbps
+  int node_mobility = 5; //relay speeds range(0,5) m/s
+  int relay_distance=5; //range (5,50)m
+  int tbr = 5; //range (5,15)%
+  int rx_buffer_size=25; //range (25,75)%
 
+    //Variables Declaration
+  uint16_t port = 999;
+  uint32_t maxBytes = 1048576; //1MBs
 
+  
   // Allow the user to override any of the defaults and the above
   // Bind ()s at run-time, via command-line arguments
   CommandLine cmd;
-  cmd.AddValue ("EcmpMode", "EcmpMode: (0 none, 1 random, 2 flow, 3 Round_Robin)", ecmpMode);
+
   cmd.AddValue ("Socket", "Socket: (0 UDP, 1 TCP)", socket);
   cmd.Parse (argc, argv);
 
+  //configure defaults
+  Config::SetDefault ("ns3::Ipv4GlobalRouting::RespondToInterfaceEvents", BooleanValue (true));
   Config::SetDefault ("ns3::Ipv4GlobalRouting::RandomEcmpRouting", BooleanValue (true));
+  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
+  Config::SetDefault ("ns3::BulkSendApplication::SendSize", UintegerValue (512));
+
+
+   //Enable MPTCP
+  Config::SetDefault ("ns3::TcpSocketBase::EnableMpTcp", BooleanValue (true));
+  Config::SetDefault ("ns3::MpTcpSocketBase::PathManagerMode",
+                      EnumValue (MpTcpSocketBase::nDiffPorts));
+
+  //display the input parameters
+  cout << "No of Relays: " << no_relays << endl;
+  cout << "Capacity of each Relay: " << relay_capacity << endl;
+  cout << "Relay's Mobility: " << node_mobility << endl;
+  cout << "Relay-Host Distance: " << relay_distance << endl;
+  cout << "Target Bit Rate: " << tbr << endl;
+  cout << "Relay Rx buffer size: " << rx_buffer_size << endl;
 
   NS_LOG_INFO ("Create nodes.");
   NodeContainer c;
@@ -194,11 +220,11 @@ main (int argc, char *argv[])
 //  p2p.EnablePcap ("ecmp-global-routing", 3, 2);
 //  p2p.EnablePcap ("ecmp-global-routing", 4, 2);
 
-  AnimationInterface anim("netanim/ecmp");
+  AnimationInterface anim("netanim/ecmp.xml");
   anim.SetMaxPktsPerTraceFile(100000000);
   for (uint32_t i = 1; i < 7; i++)
         anim.UpdateNodeColor(c.Get(i), 0, 128, 0);
-  anim.EnablePacketMetadata(true);
+ // anim.EnablePacketMetadata(true);
 
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Run ();
