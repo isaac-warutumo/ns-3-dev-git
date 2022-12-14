@@ -42,7 +42,7 @@ int node_mobility = 5; //relay speeds range(0,5) m/s
 int relay_distance = 5; //range (5,50)m
 int tbr = 5; //range (5,15)%
 int rx_buffer_size = 25; //range (25,75)%
-int mptcp=0; // udp=0, tcp=1;
+int mptcp = 0; // udp=0, tcp=1;
 
 //Variables Declaration
 uint16_t port = 999;
@@ -68,12 +68,11 @@ main (int argc, char *argv[])
       cout << "Argument " << i << ": " << argv[i] << endl;
     }
 
-
   cout << endl;
- 
+
   //a pointer to array to hold cluster node capacities
   array_relay_capacities = new int[no_relays];
-   //create an array with capacity
+  //create an array with capacity
   for (size_t i = 0; i < no_relays; i++)
     {
       array_relay_capacities[i] = relay_capacity;
@@ -115,24 +114,29 @@ main (int argc, char *argv[])
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nc_enb);
   mobility.Install (nc_host.Get (0));
+  mobility.Install (nc_host.Get (1));
 
-  //define stringValue depending on the node_mobility
+  //define stringValue for the node_mobility
   stringstream node_mobility_stream;
-  string node_speed = "";
-  node_mobility_stream.str (string ());//reset stream to empty
+  node_mobility_stream.str (string ()); //reset stream to empty
   node_mobility_stream << "ns3::ConstantRandomVariable[Constant=" << node_mobility << "]";
-  node_speed = node_mobility_stream.str ();//"ns3::ConstantRandomVariable[Constant=5.0]"
+  string node_speed = node_mobility_stream.str (); //"ns3::ConstantRandomVariable[Constant=5.0]"
 
-  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator", "X", StringValue ("10"), "Y",
-                                 StringValue ("20"), "Rho",
-                                 StringValue ("ns3::UniformRandomVariable[Min=0|Max=10]"));
+  //define stringValue for the relay_host_distance
+  stringstream relay_host_distance_stream;
+  relay_host_distance_stream.str (string ()); //reset stream to empty
+  relay_host_distance_stream << "ns3::UniformRandomVariable[Min=0|Max="<< relay_distance << "]";
+  string relay_host_distance = relay_host_distance_stream.str (); //ns3::UniformRandomVariable[Min=0|Max=5]
+
+  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator", "X", StringValue ("25"), "Y",
+                                 StringValue ("50"), "Rho",
+                                 StringValue (relay_host_distance));
 
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel", "Mode", StringValue ("Time"), "Time",
-                             StringValue ("2s"), "Speed",
-                             StringValue (node_speed), "Bounds",
-                             StringValue ("0|30|0|30"));
+                             StringValue ("2s"), "Speed", StringValue (node_speed), "Bounds",
+                             StringValue ("0|100|0|100"));
   mobility.Install (nc_relay);
-  mobility.Install (nc_host.Get (1));
+  
   /////////////////////creating topology////////////////
   //remember to deallocate these dynamic arrays
   NodeContainer *e0Ri = new NodeContainer[no_relays];
@@ -209,7 +213,7 @@ main (int argc, char *argv[])
       BulkSendHelper source ("ns3::TcpSocketFactory",
                              InetSocketAddress (Ipv4Address ("10.1.1.1"), port));
 
-     // source.SetConstantRate (DataRate ("100Mbps"));
+      // source.SetConstantRate (DataRate ("100Mbps"));
       //source.SetAttribute ("PacketSize", UintegerValue (500));
 
       source.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
@@ -316,7 +320,7 @@ main (int argc, char *argv[])
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Stop (Seconds (100.0));
 
-   //schedule events
+  //schedule events
   //   Ptr<Node> n1 = enb.Get (0);
   //   Ptr<Ipv4> ipv41 = n1->GetObject<Ipv4> ();
   //   // The first ifIndex is 0 for loopback, then the first p2p is numbered 1,
@@ -342,9 +346,7 @@ main (int argc, char *argv[])
 
       std::cout << "Flow " << i->first - 1 << " (" << t.sourceAddress << " -> "
                 << t.destinationAddress << ")\n";
-      std::cout << "  Tx Bytes:   " << i->second.txBytes / 1024 << "KBs \n";
-      std::cout << "  Rx Bytes:   " << i->second.rxBytes / 1024 << "KBs \n";
-
+      
       //rxbytes*8=bits; nanoseconds=pow(10,9); Mbps=pow(10,6);
       //Mbps/nanoseconds=pow(10,3)
       std::cout << "  Throughput: " << setiosflags (ios::fixed) << setprecision (3)
@@ -353,10 +355,9 @@ main (int argc, char *argv[])
                 << " Mbps\n";
       totalThroughput += i->second.rxBytes * 8.0 * pow (10, 3) /
                          (i->second.timeLastRxPacket - i->second.timeFirstRxPacket);
-      std::cout << "  Tx Packets:   " << i->second.txPackets << "\n";
-      std::cout << "  Rx Packets:   " << i->second.rxPackets << "\n";
-      // std::cout << "  Delay Sum:   " << i->second.delaySum << "\n";
-      // std::cout << "  Average Delay:   " << i->second.delaySum / i->second.rxPackets << "\n";
+      
+      std::cout << "  Tx Data:   " << i->second.txBytes/pow(2,20) << "MBs \n";
+      std::cout << "  Rx Data:   " << i->second.rxBytes/pow(2,20) << "MBs \n";
     }
   std::cout << " MPTCP  Throughput: " << setiosflags (ios::fixed) << setprecision (3)
             << totalThroughput << " Mbps\n";
@@ -378,6 +379,4 @@ main (int argc, char *argv[])
   delete[] intfiE0Ri;
   delete[] chiRiH1;
   delete[] intfiRiH1;
-
-  
 }
