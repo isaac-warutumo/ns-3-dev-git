@@ -1,0 +1,15 @@
+<anim ver="netanim-3.108" filetype="animation" >
+<node id="0" sysId="0" locX="17" locY="59" />
+<nu p="c" t="0" id="0" r="255" g="0" b="0" />
+<nonp2plinkproperties id="0" ipAddress="127.0.0.1~00:00:00:00:00:00" channelType="Unknown channel" />
+<ip n="0" >
+<address >127.0.0.1</address>
+
+</ip>
+<ipv6 n="0" >
+<address >::1</address>
+
+</ipv6>
+<nu p="s" t="0" id="0" w="1" h="1" />
+<ncs ncId="0" n="RemainingEnergy" t="DOUBLE" />
+</anim>

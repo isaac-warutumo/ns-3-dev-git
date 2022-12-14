@@ -1,0 +1,13 @@
+def build(bld):
+	module_dependencies = ['netanim']
+	module = bld.create_ns3_module('isaac', module_dependencies)
+	#Source files
+	module.source = [
+		'model/cluster.cc'
+		]
+	#Header files
+	headers = bld(features='ns3header')
+	headers.module = 'isaac'
+	headers.source = [
+		'model/cluster.h'
+		]
