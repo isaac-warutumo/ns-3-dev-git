@@ -11,7 +11,7 @@ class Cluster
 {
   int m_nNodes;
   int *m_nodeCapacities; //a pointer to array to hold cluster node capacities
-  int m_upperNodeCapacity;
+  int m_RequiredCapacity;
 
 public:
   Cluster (int myClusterNodes, int arrayWithNodeCapacities[], int myUpperNodeCapacity);

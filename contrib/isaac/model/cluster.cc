@@ -4,10 +4,10 @@
 #include <iostream>
 #include <cmath> //required to use pow
 
-Cluster::Cluster (int myClusterNodes, int arrayWithNodeCapacities[], int myUpperNodeCapacity)
+Cluster::Cluster (int myClusterNodes, int arrayWithNodeCapacities[], int myRequiredCapacity)
     : m_nNodes (myClusterNodes),
       m_nodeCapacities (arrayWithNodeCapacities),
-      m_upperNodeCapacity (myUpperNodeCapacity)
+      m_RequiredCapacity (myRequiredCapacity)
 {
 }
 
@@ -86,13 +86,13 @@ void
 Cluster::printHalfSetSumArrays (int myHalfSetSize, vector<vector<int>> &myHalfSetArray2D,
                                 vector<int> &myHalfSetArray1D)
 {
-  //printHalfSubset1 Arrays  -- to change it to become a function
-  cout << "myHalfSetArray1D" << endl;
-  for (size_t i = 0; i < pow (2, myHalfSetSize); i++)
-    {
-      cout << myHalfSetArray1D[i] << "\t";
-    }
-  cout << endl;
+  // //printHalfSubset1 Arrays  -- to change it to become a function
+  // cout << "myHalfSetArray1D" << endl;
+  // for (size_t i = 0; i < pow (2, myHalfSetSize); i++)
+  //   {
+  //     cout << myHalfSetArray1D[i] << "\t";
+  //   }
+  // cout << endl;
 
   // cout << "myHalfSetArray2D" << endl;
   // for (size_t i = 0; i < pow (2, myHalfSetSize); i++)

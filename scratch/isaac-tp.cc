@@ -36,30 +36,33 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("MpTcpTestingExample");
 
 //input parameters
-size_t no_relays = 2; //number of relays (2,10)
-int relay_capacity = 10; //relay capacity range(2,50) Mbps
+size_t cluster_nodes = 2; //number of relays (2,10)
+int relay_capacity = 5; //relay capacity range(2,50) Mbps
 int node_mobility = 5; //relay speeds range(0,5) m/s
 int relay_distance = 5; //range (5,50)m
-int tbr = 5; //range (5,15)%
-int rx_buffer_size = 25; //range (25,75)%
+int tbr = 15; //range (5,15)%
+int rx_buffer_size_pct = 25; //range (25,75)%
 int mptcp = 0; // udp=0, tcp=1;
+int required_capacity = 50; //10Mbps for latency sensitive and 50Mbps for capacity sensitive expts
 
 //Variables Declaration
 uint16_t port = 999;
 uint32_t maxBytes = 1048576; //1MBs
 int *array_relay_capacities;
+int subset_sum_relays=0;
 
 int
 main (int argc, char *argv[])
 {
   CommandLine cmd;
-  cmd.AddValue ("no_relays", "no_relays", no_relays);
+  cmd.AddValue ("cluster_nodes", "cluster_nodes", cluster_nodes);
   cmd.AddValue ("relay_capacity", "relay_capacity", relay_capacity);
   cmd.AddValue ("node_mobility", "node_mobility", node_mobility);
   cmd.AddValue ("relay_distance", "relay_distance", relay_distance);
   cmd.AddValue ("tbr", "tbr", tbr);
-  cmd.AddValue ("rx_buffer_size", "rx_buffer_size", rx_buffer_size);
+  cmd.AddValue ("rx_buffer_size", "rx_buffer_size", rx_buffer_size_pct);
   cmd.AddValue ("mptcp", "mptcp", mptcp); // udp=0, tcp=1;
+  cmd.AddValue ("required_capacity", "required_capacity", required_capacity);
 
   cmd.Parse (argc, argv);
   cout << "You added " << argc << " arguments" << endl;
@@ -71,11 +74,11 @@ main (int argc, char *argv[])
   cout << endl;
 
   //a pointer to array to hold cluster node capacities
-  array_relay_capacities = new int[no_relays];
+  array_relay_capacities = new int[cluster_nodes];
   //create an array with capacity
-  for (size_t i = 0; i < no_relays; i++)
+  for (size_t i = 0; i < cluster_nodes; i++)
     {
-      array_relay_capacities[i] = relay_capacity;
+      array_relay_capacities[i] = relay_capacity + i; //remove i
     }
 
   // The below value configures the default behavior of global routing.
@@ -86,7 +89,8 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
   //Config::SetDefault ("ns3::BulkSendApplication::SendSize", UintegerValue (512));
 
-  uint32_t rcv_buffer_size = 131072 * rx_buffer_size/100;//change the buffer size to the percentage given
+  uint32_t rcv_buffer_size =
+      131072 * rx_buffer_size_pct / 100; //change the buffer size to the percentage given
 
   Config::SetDefault ("ns3::UdpSocket::RcvBufSize", UintegerValue (rcv_buffer_size));
 
@@ -94,6 +98,23 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::TcpSocketBase::EnableMpTcp", BooleanValue (true));
   Config::SetDefault ("ns3::MpTcpSocketBase::PathManagerMode",
                       EnumValue (MpTcpSocketBase::nDiffPorts));
+
+  Cluster myCluster (cluster_nodes, array_relay_capacities, relay_capacity);
+
+  int min_required_capacity, max_required_capacity;
+
+  min_required_capacity = (int) floor (required_capacity*(1 - ((double)tbr / 100)));
+  max_required_capacity = (int) ceil (required_capacity*(1 + ((double)tbr / 100)));
+  cout << "min_required_capacity: " << min_required_capacity << endl;
+  cout << "max_required_capacity: " << max_required_capacity << endl;
+
+  // Find the number of subsets with desired Sum
+  if (myCluster.findAndPrintSubsets (array_relay_capacities, cluster_nodes, min_required_capacity,
+                                     max_required_capacity) > 0)
+    cout << "Yes Subsets found!!!" << endl;
+    //subset_sum_relays=myCluster.
+  else
+    cout << "No Subsets found!!!" << endl;
 
   //Initialize Internet Stack and Routing Protocols
   InternetStackHelper internet;
@@ -109,9 +130,10 @@ main (int argc, char *argv[])
   nc_enb.Create (1);
   internet.Install (nc_enb);
 
+
   // relay
   NodeContainer nc_relay; // NodeContainer for relay
-  nc_relay.Create (no_relays);
+  nc_relay.Create (cluster_nodes);
   internet.Install (nc_relay);
 
   MobilityHelper mobility;
@@ -129,30 +151,30 @@ main (int argc, char *argv[])
   //define stringValue for the relay_host_distance
   stringstream relay_host_distance_stream;
   relay_host_distance_stream.str (string ()); //reset stream to empty
-  relay_host_distance_stream << "ns3::UniformRandomVariable[Min=0|Max="<< relay_distance << "]";
-  string relay_host_distance = relay_host_distance_stream.str (); //ns3::UniformRandomVariable[Min=0|Max=5]
+  relay_host_distance_stream << "ns3::UniformRandomVariable[Min=0|Max=" << relay_distance << "]";
+  string relay_host_distance =
+      relay_host_distance_stream.str (); //ns3::UniformRandomVariable[Min=0|Max=5]
 
   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator", "X", StringValue ("25"), "Y",
-                                 StringValue ("50"), "Rho",
-                                 StringValue (relay_host_distance));
+                                 StringValue ("50"), "Rho", StringValue (relay_host_distance));
 
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel", "Mode", StringValue ("Time"), "Time",
                              StringValue ("2s"), "Speed", StringValue (node_speed), "Bounds",
                              StringValue ("0|100|0|100"));
   mobility.Install (nc_relay);
-  
+
   /////////////////////creating topology////////////////
   //remember to deallocate these dynamic arrays
-  NodeContainer *e0Ri = new NodeContainer[no_relays];
-  NodeContainer *riH1 = new NodeContainer[no_relays];
+  NodeContainer *e0Ri = new NodeContainer[cluster_nodes];
+  NodeContainer *riH1 = new NodeContainer[cluster_nodes];
 
   NodeContainer e0h0 = NodeContainer (nc_enb.Get (0), nc_host.Get (0));
 
   //another dynamic array to be deallocated
-  NetDeviceContainer *chiE0Ri = new NetDeviceContainer[no_relays];
+  NetDeviceContainer *chiE0Ri = new NetDeviceContainer[cluster_nodes];
 
   //loop through the relays
-  for (size_t i = 0; i < no_relays; i++)
+  for (size_t i = 0; i < cluster_nodes; i++)
     {
       e0Ri[i] = NodeContainer (nc_enb.Get (0), nc_relay.Get (i));
       riH1[i] = NodeContainer (nc_host.Get (1), nc_relay.Get (i));
@@ -166,13 +188,13 @@ main (int argc, char *argv[])
   //p2p.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
 
   NS_LOG_INFO ("Assign IP Addresses.");
-  Ipv4InterfaceContainer *intfiE0Ri = new Ipv4InterfaceContainer[no_relays];
+  Ipv4InterfaceContainer *intfiE0Ri = new Ipv4InterfaceContainer[cluster_nodes];
   ipv4.SetBase ("10.1.2.0", "255.255.255.0");
-  for (size_t i = 0; i < no_relays; i++)
+  for (size_t i = 0; i < cluster_nodes; i++)
     {
       //reset stream to empty
       nodeCapacityStream.str (string ());
-      nodeCapacityStream << array_relay_capacities[i] << "Mbps";
+      nodeCapacityStream << array_relay_capacities[i] << "Mbps"; //remove this i
       nodeCapacity = nodeCapacityStream.str ();
 
       //cout << "node: " << i << " Capacity: " << nodeCapacity << endl;
@@ -191,11 +213,11 @@ main (int argc, char *argv[])
   p2pD2d.SetChannelAttribute ("Delay", StringValue ("1ns"));
 
   //some additional dynamic arrays to be deallocated
-  NetDeviceContainer *chiRiH1 = new NetDeviceContainer[no_relays];
-  Ipv4InterfaceContainer *intfiRiH1 = new Ipv4InterfaceContainer[no_relays];
+  NetDeviceContainer *chiRiH1 = new NetDeviceContainer[cluster_nodes];
+  Ipv4InterfaceContainer *intfiRiH1 = new Ipv4InterfaceContainer[cluster_nodes];
 
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
-  for (size_t i = 0; i < no_relays; i++)
+  for (size_t i = 0; i < cluster_nodes; i++)
     {
       chiRiH1[i] = p2pD2d.Install (riH1[i]);
       intfiRiH1[i] = ipv4.Assign (chiRiH1[i]);
@@ -233,8 +255,6 @@ main (int argc, char *argv[])
 
       sinkApps.Start (Seconds (0.0));
       sinkApps.Stop (Seconds (100.0));
-      
-      
     }
   else
     {
@@ -258,7 +278,6 @@ main (int argc, char *argv[])
 
       sinkApps.Start (Seconds (0.0));
       sinkApps.Stop (Seconds (100.0));
-      
     }
 
   //=========== Start the simulation ===========//
@@ -285,7 +304,7 @@ main (int argc, char *argv[])
   anim.UpdateNodeImage (2, resourceIdIconEnb);
   anim.UpdateNodeSize (2, 7, 7);
   //relays
-  for (size_t i = 0; i < no_relays; i++)
+  for (size_t i = 0; i < cluster_nodes; i++)
     {
       int x = i * 10;
       anim.SetConstantPosition (nc_relay.Get (i), x, 20.0);
@@ -293,7 +312,7 @@ main (int argc, char *argv[])
 
   uint32_t resourceIdIconPhone =
       anim.AddResource ("/home/ns3/ns-3-dev-git/netanim/icons/phone.png");
-  for (size_t i = 0; i < no_relays; i++)
+  for (size_t i = 0; i < cluster_nodes; i++)
     {
       anim.UpdateNodeImage (i + 3, resourceIdIconPhone);
       anim.UpdateNodeSize (i + 3, 4, 4);
@@ -349,7 +368,7 @@ main (int argc, char *argv[])
 
       std::cout << "Flow " << i->first - 1 << " (" << t.sourceAddress << " -> "
                 << t.destinationAddress << ")\n";
-      
+
       //rxbytes*8=bits; nanoseconds=pow(10,9); Mbps=pow(10,6);
       //Mbps/nanoseconds=pow(10,3)
       std::cout << "  Throughput: " << setiosflags (ios::fixed) << setprecision (3)
@@ -358,9 +377,9 @@ main (int argc, char *argv[])
                 << " Mbps\n";
       totalThroughput += i->second.rxBytes * 8.0 * pow (10, 3) /
                          (i->second.timeLastRxPacket - i->second.timeFirstRxPacket);
-      
-      std::cout << "  Tx Data:   " << i->second.txBytes/pow(2,20) << "MBs \n";
-      std::cout << "  Rx Data:   " << i->second.rxBytes/pow(2,20) << "MBs \n";
+
+      std::cout << "  Tx Data:   " << i->second.txBytes / pow (2, 20) << "MBs \n";
+      std::cout << "  Rx Data:   " << i->second.rxBytes / pow (2, 20) << "MBs \n";
     }
   std::cout << " MPTCP  Throughput: " << setiosflags (ios::fixed) << setprecision (3)
             << totalThroughput << " Mbps\n";
