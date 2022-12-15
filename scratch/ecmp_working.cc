@@ -19,7 +19,7 @@ int
 main (int argc, char *argv[])
 {
   uint32_t ecmpMode = 2;
-  uint32_t socket = 1;
+  uint32_t socket = 0;
 
   //input parameters
   int no_relays = 2; //number of relays (2,10)

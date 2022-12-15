@@ -86,6 +86,10 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
   //Config::SetDefault ("ns3::BulkSendApplication::SendSize", UintegerValue (512));
 
+  uint32_t rcv_buffer_size = 131072 * rx_buffer_size/100;//change the buffer size to the percentage given
+
+  Config::SetDefault ("ns3::UdpSocket::RcvBufSize", UintegerValue (rcv_buffer_size));
+
   //Enable MPTCP
   Config::SetDefault ("ns3::TcpSocketBase::EnableMpTcp", BooleanValue (true));
   Config::SetDefault ("ns3::MpTcpSocketBase::PathManagerMode",
@@ -229,8 +233,8 @@ main (int argc, char *argv[])
 
       sinkApps.Start (Seconds (0.0));
       sinkApps.Stop (Seconds (100.0));
-      Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (sinkApps.Get (0));
-      std::cout << "Total Bytes Received: " << sink1->GetTotalRx () << std::endl;
+      
+      
     }
   else
     {
@@ -254,8 +258,7 @@ main (int argc, char *argv[])
 
       sinkApps.Start (Seconds (0.0));
       sinkApps.Stop (Seconds (100.0));
-      Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (sinkApps.Get (0));
-      std::cout << "Total Bytes Received: " << sink1->GetTotalRx () << std::endl;
+      
     }
 
   //=========== Start the simulation ===========//
