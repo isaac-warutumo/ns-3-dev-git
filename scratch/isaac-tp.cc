@@ -131,14 +131,6 @@ main (int argc, char *argv[])
   // relays
   subset_sum_relays = myCluster.getMaxSubSumRelays ();
 
-  // create extra relays that wont be used to cooperate
-  if (cluster_nodes > subset_sum_relays)
-    {
-      NodeContainer nc_relay_extras;
-      nc_relay_extras.Create (cluster_nodes - subset_sum_relays); //
-      //cout<<"cluster_nodes - subset_sum_relays: "<<cluster_nodes - subset_sum_relays<<endl;
-    }
-
   NodeContainer nc_relay; // NodeContainer for relay
   nc_relay.Create (subset_sum_relays); //cluster_nodes
   internet.Install (nc_relay);
@@ -201,7 +193,7 @@ main (int argc, char *argv[])
     {
       //reset stream to empty
       nodeCapacityStream.str (string ());
-      nodeCapacityStream << array_relay_capacities[i] << "Mbps"; 
+      nodeCapacityStream << array_relay_capacities[i] << "Mbps";
       nodeCapacity = nodeCapacityStream.str ();
 
       //cout << "node: " << i << " Capacity: " << nodeCapacity << endl;
@@ -286,6 +278,38 @@ main (int argc, char *argv[])
       sinkApps.Start (Seconds (0.0));
       sinkApps.Stop (Seconds (100.0));
     }
+  //=========================extra nodes that dont cooperate======================//
+  // create extra relays that cant cooperate
+  if (cluster_nodes > subset_sum_relays)
+    {
+      NodeContainer nc_relay_extras;
+      nc_relay_extras.Create (cluster_nodes - subset_sum_relays);
+
+      MobilityHelper mobility;
+
+      //define stringValue for the node_mobility
+      stringstream node_mobility_stream;
+      node_mobility_stream.str (string ()); //reset stream to empty
+      node_mobility_stream << "ns3::ConstantRandomVariable[Constant=" << node_mobility << "]";
+      string node_speed = node_mobility_stream.str (); //"ns3::ConstantRandomVariable[Constant=5.0]"
+
+      //define stringValue for the relay_host_distance
+      stringstream relay_host_distance_stream;
+      relay_host_distance_stream.str (string ()); //reset stream to empty
+      relay_host_distance_stream << "ns3::UniformRandomVariable[Min=0|Max=" << relay_distance + 30
+                                 << "]"; //farther 30m away
+      string relay_host_distance =
+          relay_host_distance_stream.str (); //ns3::UniformRandomVariable[Min=0|Max=5]
+
+      mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator", "X", StringValue ("25"),
+                                     "Y", StringValue ("50"), "Rho",
+                                     StringValue (relay_host_distance));
+
+      mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel", "Mode", StringValue ("Time"),
+                                 "Time", StringValue ("2s"), "Speed", StringValue (node_speed),
+                                 "Bounds", StringValue ("0|100|0|100"));
+      mobility.Install (nc_relay_extras);
+    }
 
   //=========== Start the simulation ===========//
 
@@ -299,7 +323,7 @@ main (int argc, char *argv[])
   AnimationInterface anim ("netanim/isaac-tp.xml");
 
   //NodeContainer server
-  anim.SetConstantPosition (nc_host.Get (0), 25.0, 5.0);
+  anim.SetConstantPosition (nc_host.Get (0), 35.0, 5.0);
   uint32_t resourceIdIconServer =
       anim.AddResource ("/home/ns3/ns-3-dev-git/netanim/icons/server.png");
   anim.UpdateNodeImage (0, resourceIdIconServer);
