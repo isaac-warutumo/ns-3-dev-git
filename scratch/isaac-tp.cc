@@ -105,8 +105,7 @@ main (int argc, char *argv[])
 
   min_required_capacity = (int) floor (required_capacity*(1 - ((double)tbr / 100)));
   max_required_capacity = (int) ceil (required_capacity*(1 + ((double)tbr / 100)));
-  cout << "min_required_capacity: " << min_required_capacity << endl;
-  cout << "max_required_capacity: " << max_required_capacity << endl;
+
 
   // Find the number of subsets with desired Sum
   if (myCluster.findAndPrintSubsets (array_relay_capacities, cluster_nodes, min_required_capacity,
