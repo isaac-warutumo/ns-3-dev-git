@@ -12,6 +12,9 @@ class Cluster
   int m_nNodes;
   int *m_nodeCapacities; //a pointer to array to hold cluster node capacities
   int m_RequiredCapacity;
+  int m_minSubSumRelays;
+  int m_maxSubSumRelays;
+  int m_relaysCounter;
 
 public:
   Cluster (int myClusterNodes, int arrayWithNodeCapacities[], int myUpperNodeCapacity);
@@ -21,6 +24,10 @@ public:
                         vector<vector<int>> &subsetSumVector2D, vector<int> &subsetSumVector1D);
   void printHalfSetSumArrays (int myHalfSetSize, vector<vector<int>> &myHalfSetArray2D,
                               vector<int> &myHalfSetArray1D);
+
+  int getMinSubSumRelays ();
+
+  int getMaxSubSumRelays ();
 };
 
 #endif // Cluster_h

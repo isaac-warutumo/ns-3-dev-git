@@ -49,7 +49,7 @@ int required_capacity = 50; //10Mbps for latency sensitive and 50Mbps for capaci
 uint16_t port = 999;
 uint32_t maxBytes = 1048576; //1MBs
 int *array_relay_capacities;
-int subset_sum_relays=0;
+size_t subset_sum_relays = 0;
 
 int
 main (int argc, char *argv[])
@@ -78,7 +78,7 @@ main (int argc, char *argv[])
   //create an array with capacity
   for (size_t i = 0; i < cluster_nodes; i++)
     {
-      array_relay_capacities[i] = relay_capacity + i; //remove i
+      array_relay_capacities[i] = relay_capacity; //remove i
     }
 
   // The below value configures the default behavior of global routing.
@@ -103,15 +103,14 @@ main (int argc, char *argv[])
 
   int min_required_capacity, max_required_capacity;
 
-  min_required_capacity = (int) floor (required_capacity*(1 - ((double)tbr / 100)));
-  max_required_capacity = (int) ceil (required_capacity*(1 + ((double)tbr / 100)));
-
+  min_required_capacity = (int) floor (required_capacity * (1 - ((double) tbr / 100)));
+  max_required_capacity = (int) ceil (required_capacity * (1 + ((double) tbr / 100)));
 
   // Find the number of subsets with desired Sum
   if (myCluster.findAndPrintSubsets (array_relay_capacities, cluster_nodes, min_required_capacity,
                                      max_required_capacity) > 0)
     cout << "Yes Subsets found!!!" << endl;
-    //subset_sum_relays=myCluster.
+  //subset_sum_relays=myCluster.
   else
     cout << "No Subsets found!!!" << endl;
 
@@ -129,10 +128,19 @@ main (int argc, char *argv[])
   nc_enb.Create (1);
   internet.Install (nc_enb);
 
+  // relays
+  subset_sum_relays = myCluster.getMaxSubSumRelays ();
 
-  // relay
+  // create extra relays that wont be used to cooperate
+  if (cluster_nodes > subset_sum_relays)
+    {
+      NodeContainer nc_relay_extras;
+      nc_relay_extras.Create (cluster_nodes - subset_sum_relays); //
+      //cout<<"cluster_nodes - subset_sum_relays: "<<cluster_nodes - subset_sum_relays<<endl;
+    }
+
   NodeContainer nc_relay; // NodeContainer for relay
-  nc_relay.Create (cluster_nodes);
+  nc_relay.Create (subset_sum_relays); //cluster_nodes
   internet.Install (nc_relay);
 
   MobilityHelper mobility;
@@ -164,16 +172,16 @@ main (int argc, char *argv[])
 
   /////////////////////creating topology////////////////
   //remember to deallocate these dynamic arrays
-  NodeContainer *e0Ri = new NodeContainer[cluster_nodes];
-  NodeContainer *riH1 = new NodeContainer[cluster_nodes];
+  NodeContainer *e0Ri = new NodeContainer[subset_sum_relays];
+  NodeContainer *riH1 = new NodeContainer[subset_sum_relays];
 
   NodeContainer e0h0 = NodeContainer (nc_enb.Get (0), nc_host.Get (0));
 
   //another dynamic array to be deallocated
-  NetDeviceContainer *chiE0Ri = new NetDeviceContainer[cluster_nodes];
+  NetDeviceContainer *chiE0Ri = new NetDeviceContainer[subset_sum_relays];
 
   //loop through the relays
-  for (size_t i = 0; i < cluster_nodes; i++)
+  for (size_t i = 0; i < subset_sum_relays; i++)
     {
       e0Ri[i] = NodeContainer (nc_enb.Get (0), nc_relay.Get (i));
       riH1[i] = NodeContainer (nc_host.Get (1), nc_relay.Get (i));
@@ -187,13 +195,13 @@ main (int argc, char *argv[])
   //p2p.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
 
   NS_LOG_INFO ("Assign IP Addresses.");
-  Ipv4InterfaceContainer *intfiE0Ri = new Ipv4InterfaceContainer[cluster_nodes];
+  Ipv4InterfaceContainer *intfiE0Ri = new Ipv4InterfaceContainer[subset_sum_relays];
   ipv4.SetBase ("10.1.2.0", "255.255.255.0");
-  for (size_t i = 0; i < cluster_nodes; i++)
+  for (size_t i = 0; i < subset_sum_relays; i++)
     {
       //reset stream to empty
       nodeCapacityStream.str (string ());
-      nodeCapacityStream << array_relay_capacities[i] << "Mbps"; //remove this i
+      nodeCapacityStream << array_relay_capacities[i] << "Mbps"; 
       nodeCapacity = nodeCapacityStream.str ();
 
       //cout << "node: " << i << " Capacity: " << nodeCapacity << endl;
@@ -212,11 +220,11 @@ main (int argc, char *argv[])
   p2pD2d.SetChannelAttribute ("Delay", StringValue ("1ns"));
 
   //some additional dynamic arrays to be deallocated
-  NetDeviceContainer *chiRiH1 = new NetDeviceContainer[cluster_nodes];
-  Ipv4InterfaceContainer *intfiRiH1 = new Ipv4InterfaceContainer[cluster_nodes];
+  NetDeviceContainer *chiRiH1 = new NetDeviceContainer[subset_sum_relays];
+  Ipv4InterfaceContainer *intfiRiH1 = new Ipv4InterfaceContainer[subset_sum_relays];
 
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
-  for (size_t i = 0; i < cluster_nodes; i++)
+  for (size_t i = 0; i < subset_sum_relays; i++)
     {
       chiRiH1[i] = p2pD2d.Install (riH1[i]);
       intfiRiH1[i] = ipv4.Assign (chiRiH1[i]);
@@ -303,7 +311,7 @@ main (int argc, char *argv[])
   anim.UpdateNodeImage (2, resourceIdIconEnb);
   anim.UpdateNodeSize (2, 7, 7);
   //relays
-  for (size_t i = 0; i < cluster_nodes; i++)
+  for (size_t i = 0; i < subset_sum_relays; i++)
     {
       int x = i * 10;
       anim.SetConstantPosition (nc_relay.Get (i), x, 20.0);
@@ -311,7 +319,7 @@ main (int argc, char *argv[])
 
   uint32_t resourceIdIconPhone =
       anim.AddResource ("/home/ns3/ns-3-dev-git/netanim/icons/phone.png");
-  for (size_t i = 0; i < cluster_nodes; i++)
+  for (size_t i = 0; i < subset_sum_relays; i++)
     {
       anim.UpdateNodeImage (i + 3, resourceIdIconPhone);
       anim.UpdateNodeSize (i + 3, 4, 4);

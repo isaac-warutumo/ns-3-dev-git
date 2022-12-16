@@ -201,5 +201,27 @@ Cluster::findAndPrintSubsets (int myFullSet[], size_t nElements, int lowerLimit,
     }
   cout << "nSubsetsFound: " << nSubsetsFound << endl;
 
+  m_relaysCounter = finalSet2D.size ();
+
+  if (nSubsetsFound > 0)
+    {
+      m_minSubSumRelays = finalSet2D[0][1];
+      cout << "m_minSubSumRelays: " << m_minSubSumRelays << endl;
+
+      m_maxSubSumRelays = finalSet2D[m_relaysCounter - 1][1];
+      cout << "m_maxSubSumRelays: " << m_maxSubSumRelays << endl;
+    }
+
   return nSubsetsFound;
+}
+
+int
+Cluster::getMinSubSumRelays ()
+{
+  return m_minSubSumRelays;
+}
+int
+Cluster::getMaxSubSumRelays ()
+{
+  return m_maxSubSumRelays;
 }
