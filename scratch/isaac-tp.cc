@@ -47,7 +47,7 @@ int required_capacity = 50; //10Mbps for latency sensitive and 50Mbps for capaci
 
 //Variables Declaration
 uint16_t port = 999;
-uint32_t maxBytes = 1048576; //1MBs
+uint32_t maxBytes = 100; //1MBs=1048576
 int *array_relay_capacities;
 size_t subset_sum_relays = 0;
 
@@ -318,7 +318,7 @@ main (int argc, char *argv[])
   //tracemetrics trace file
   AsciiTraceHelper ascii;
 
-  p2pRelay.EnableAscii (ascii.CreateFileStream ("tracemetrics/isaac-mptcp.tr"), nc_relay);
+  p2pRelay.EnableAsciiAll (ascii.CreateFileStream ("tracemetrics/isaac-mptcp.tr"));//, nc_relay);
   ////////////////////////// Use of NetAnim model/////////////////////////////////////////
   AnimationInterface anim ("netanim/isaac-tp.xml");
 
@@ -363,29 +363,30 @@ main (int argc, char *argv[])
   outputConfig2.ConfigureDefaults ();
   outputConfig2.ConfigureAttributes ();
 
-  //   flowmon tracefiles
-  //   Install FlowMonitor on all nodes
-  FlowMonitorHelper flowmon;
-  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
-
   p2pRelay.EnablePcapAll ("pcap/isaac-p2pCapmptcp");
 
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Stop (Seconds (100.0));
 
   //schedule events
-  //   Ptr<Node> n1 = enb.Get (0);
-  //   Ptr<Ipv4> ipv41 = n1->GetObject<Ipv4> ();
-  //   // The first ifIndex is 0 for loopback, then the first p2p is numbered 1,
-  //   // then the next p2p is numbered 2
-  //   uint32_t ipv4ifIndex1 = 2;
-  //   Simulator::Schedule (MicroSeconds (200), &Ipv4::SetDown, ipv41, ipv4ifIndex1);
-  //   Simulator::Schedule (MicroSeconds (400), &Ipv4::SetUp, ipv41, ipv4ifIndex1);
+  Ptr<Node> n1 = nc_relay.Get (1);
+  Ptr<Ipv4> ipv41 = n1->GetObject<Ipv4> ();
+  // The first ifIndex is 0 for loopback, then the first p2p is numbered 1,
+  // then the next p2p is numbered 2
+  uint32_t ipv4ifIndex1 = 2;
+  Simulator::Schedule (MilliSeconds (2), &Ipv4::SetDown, ipv41, ipv4ifIndex1);
+  Simulator::Schedule (MilliSeconds (40), &Ipv4::SetUp, ipv41, ipv4ifIndex1);
+
+  Simulator::Schedule (Seconds (1), &Ipv4GlobalRoutingHelper::RecomputeRoutingTables);
 
   Simulator::Run ();
 
-  // Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (sinkApps.Get (0));
-  // int totalBytesRx = sink1->GetTotalRx ();
+
+
+  //   flowmon tracefiles
+  //   Install FlowMonitor on all nodes
+  FlowMonitorHelper flowmon;
+  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
   int64x64_t totalThroughput = 0;
 
   monitor->CheckForLostPackets ();
@@ -397,7 +398,7 @@ main (int argc, char *argv[])
       Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
       //do not print ack flows
 
-      std::cout << "Flow " << i->first - 1 << " (" << t.sourceAddress << " -> "
+      std::cout << "Flow " << i->first - 2 << " (" << t.sourceAddress << " -> "
                 << t.destinationAddress << ")\n";
 
       //rxbytes*8=bits; nanoseconds=pow(10,9); Mbps=pow(10,6);
