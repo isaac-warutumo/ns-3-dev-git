@@ -107,7 +107,7 @@ main (int argc, char *argv[])
   // Set up tracing if enabled
   //
   AsciiTraceHelper ascii;
-  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("trace-file-name.tr");
+  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("tracemetrics/trace-file-name.tr");
   pointToPoint.EnableAscii (stream, devices);
 
   //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tcp-bulk-send1024000.tr"));

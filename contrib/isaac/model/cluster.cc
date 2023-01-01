@@ -9,6 +9,9 @@ Cluster::Cluster (int myClusterNodes, int arrayWithNodeCapacities[], int myRequi
       m_nodeCapacities (arrayWithNodeCapacities),
       m_RequiredCapacity (myRequiredCapacity)
 {
+  m_maxSubSumRelays=myClusterNodes;
+  m_minSubSumRelays=myClusterNodes;
+
 }
 
 //function to sort the 2D vector on basis of a particular column (0 in this case)

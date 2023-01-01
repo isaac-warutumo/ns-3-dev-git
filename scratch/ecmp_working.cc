@@ -15,7 +15,7 @@ using namespace ns3;
 using namespace std;
 NS_LOG_COMPONENT_DEFINE ("EcmpExample");
 
-int 
+int
 main (int argc, char *argv[])
 {
   uint32_t ecmpMode = 2;
@@ -23,17 +23,16 @@ main (int argc, char *argv[])
 
   //input parameters
   int no_relays = 2; //number of relays (2,10)
-  int relay_capacity = 10;//relay capacity range(2,50) Mbps
+  int relay_capacity = 10; //relay capacity range(2,50) Mbps
   int node_mobility = 5; //relay speeds range(0,5) m/s
-  int relay_distance=5; //range (5,50)m
+  int relay_distance = 5; //range (5,50)m
   int tbr = 5; //range (5,15)%
-  int rx_buffer_size=25; //range (25,75)%
+  int rx_buffer_size = 25; //range (25,75)%
 
-    //Variables Declaration
+  //Variables Declaration
   uint16_t port = 999;
   uint32_t maxBytes = 1048576; //1MBs
 
-  
   // Allow the user to override any of the defaults and the above
   // Bind ()s at run-time, via command-line arguments
   CommandLine cmd;
@@ -47,8 +46,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
   Config::SetDefault ("ns3::BulkSendApplication::SendSize", UintegerValue (512));
 
-
-   //Enable MPTCP
+  //Enable MPTCP
   Config::SetDefault ("ns3::TcpSocketBase::EnableMpTcp", BooleanValue (true));
   Config::SetDefault ("ns3::MpTcpSocketBase::PathManagerMode",
                       EnumValue (MpTcpSocketBase::nDiffPorts));
@@ -87,27 +85,26 @@ main (int argc, char *argv[])
 
   //int x = 0;
   int y = 0;
-  for (uint32_t i = 0; i < c.GetN(); i++)
+  for (uint32_t i = 0; i < c.GetN (); i++)
     {
-      Ptr<ConstantPositionMobilityModel> loc = CreateObject<ConstantPositionMobilityModel>();
-      c.Get(i)->AggregateObject(loc);
+      Ptr<ConstantPositionMobilityModel> loc = CreateObject<ConstantPositionMobilityModel> ();
+      c.Get (i)->AggregateObject (loc);
 
       if (i == 0)
-        loc->SetPosition(Vector(1, 5, 0));
+        loc->SetPosition (Vector (1, 5, 0));
       else if (i == 1 || i == 2 || i == 3 || i == 4)
         {
           y += 2;
-          loc->SetPosition(Vector(10, y, 0));
+          loc->SetPosition (Vector (10, y, 0));
         }
       else if (i == 5 || i == 6)
         {
           y -= 2;
-          loc->SetPosition(Vector(20, y, 0));
+          loc->SetPosition (Vector (20, y, 0));
         }
       else if (i == 7)
-        loc->SetPosition(Vector(23, 5, 0));
+        loc->SetPosition (Vector (23, 5, 0));
     }
-
 
   InternetStackHelper internet;
   internet.Install (c);
@@ -137,7 +134,6 @@ main (int argc, char *argv[])
   NetDeviceContainer d5d7 = p2p.Install (n5n7);
   NetDeviceContainer d6d7 = p2p.Install (n6n7);
 
-
   NS_LOG_INFO ("Assign IP Addresses.");
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.0.1.0", "255.255.255.0");
@@ -159,20 +155,20 @@ main (int argc, char *argv[])
   ipv4.SetBase ("10.2.6.0", "255.255.255.0");
   ipv4.Assign (d2d6);
 
-  ipv4.SetBase("10.3.5.0", "255.255.255.0");
-  ipv4.Assign(d3d5);
-  ipv4.SetBase("10.3.6.0", "255.255.255.0");
-  ipv4.Assign(d3d6);
+  ipv4.SetBase ("10.3.5.0", "255.255.255.0");
+  ipv4.Assign (d3d5);
+  ipv4.SetBase ("10.3.6.0", "255.255.255.0");
+  ipv4.Assign (d3d6);
 
-  ipv4.SetBase("10.4.5.0", "255.255.255.0");
-  ipv4.Assign(d4d5);
-  ipv4.SetBase("10.4.6.0", "255.255.255.0");
-  ipv4.Assign(d4d6);
+  ipv4.SetBase ("10.4.5.0", "255.255.255.0");
+  ipv4.Assign (d4d5);
+  ipv4.SetBase ("10.4.6.0", "255.255.255.0");
+  ipv4.Assign (d4d6);
 
-  ipv4.SetBase("10.5.7.0", "255.255.255.0");
-  ipv4.Assign(d5d7);
-  ipv4.SetBase("10.6.7.0", "255.255.255.0");
-  ipv4.Assign(d6d7);
+  ipv4.SetBase ("10.5.7.0", "255.255.255.0");
+  ipv4.Assign (d5d7);
+  ipv4.SetBase ("10.6.7.0", "255.255.255.0");
+  ipv4.Assign (d6d7);
 
   NS_LOG_INFO ("Populate routing tables.");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
@@ -180,54 +176,61 @@ main (int argc, char *argv[])
   NS_LOG_INFO ("Create Applications.");
   if (socket == 0)
     {
-      uint16_t port = 9;   // Discard port (RFC 863)
-      OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address("10.5.7.2"), port));
-      onoff.SetConstantRate(DataRate("100kbps"));
-      onoff.SetAttribute("PacketSize", UintegerValue(500));
+      uint16_t port = 9; // Discard port (RFC 863)
+      OnOffHelper onoff ("ns3::UdpSocketFactory",
+                         InetSocketAddress (Ipv4Address ("10.5.7.2"), port));
+      onoff.SetConstantRate (DataRate ("100kbps"));
+      onoff.SetAttribute ("PacketSize", UintegerValue (500));
 
       ApplicationContainer apps;
       for (uint32_t i = 0; i < 10; i++)
         {
-          apps.Add(onoff.Install(c.Get(0)));
+          apps.Add (onoff.Install (c.Get (0)));
         }
 
-      apps.Start(Seconds(0.0));
-      apps.Stop(Seconds(1.0));
+      apps.Start (Seconds (0.0));
+      apps.Stop (Seconds (1.0));
 
-      PacketSinkHelper sink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), port)));
-      sink.Install(c.Get(7));
-  }
+      PacketSinkHelper sink ("ns3::UdpSocketFactory",
+                             Address (InetSocketAddress (Ipv4Address::GetAny (), port)));
+      sink.Install (c.Get (7));
+    }
   else if (socket == 1)
     {
       uint16_t port = 1500;
-      BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address("10.6.7.2"), port));
+      BulkSendHelper source ("ns3::TcpSocketFactory",
+                             InetSocketAddress (Ipv4Address ("10.6.7.2"), port));
 
       ApplicationContainer sourceApps;
       for (uint32_t i = 0; i < 5; i++)
         {
-          sourceApps.Add(source.Install(c.Get(0)));
+          sourceApps.Add (source.Install (c.Get (0)));
         }
 
-      sourceApps.Start(Seconds(0.0));
-      sourceApps.Stop(Seconds(1.0));
+      sourceApps.Start (Seconds (0.0));
+      sourceApps.Stop (Seconds (1.0));
 
-      PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
-      ApplicationContainer sinkApps = sink.Install(c.Get(7));
+      PacketSinkHelper sink ("ns3::TcpSocketFactory",
+                             InetSocketAddress (Ipv4Address::GetAny (), port));
+      ApplicationContainer sinkApps = sink.Install (c.Get (7));
     }
 
   // Trace the right-most (second) interface on nodes 2, 3, and 4
-//  p2p.EnablePcap ("ecmp-global-routing", 2, 2);
-//  p2p.EnablePcap ("ecmp-global-routing", 3, 2);
-//  p2p.EnablePcap ("ecmp-global-routing", 4, 2);
+  //  p2p.EnablePcap ("ecmp-global-routing", 2, 2);
+  //  p2p.EnablePcap ("ecmp-global-routing", 3, 2);
+  //  p2p.EnablePcap ("ecmp-global-routing", 4, 2);
 
-  AnimationInterface anim("netanim/ecmp.xml");
-  anim.SetMaxPktsPerTraceFile(100000000);
+  AsciiTraceHelper ascii;
+  p2p.EnableAsciiAll (ascii.CreateFileStream ("tracemetrics/ecmp.tr"));
+
+  AnimationInterface anim ("netanim/ecmp.xml");
+  anim.SetMaxPktsPerTraceFile (100000000);
   for (uint32_t i = 1; i < 7; i++)
-        anim.UpdateNodeColor(c.Get(i), 0, 128, 0);
- // anim.EnablePacketMetadata(true);
+    anim.UpdateNodeColor (c.Get (i), 0, 128, 0);
+  // anim.EnablePacketMetadata(true);
 
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Run ();
   Simulator::Destroy ();
-  NS_LOG_INFO("Simulation is ended!");
+  NS_LOG_INFO ("Simulation is ended!");
 }
