@@ -25,11 +25,13 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("MpTcpTestingExample");
+NS_LOG_COMPONENT_DEFINE ("MpTcpExample");
 
 int
 main (int argc, char *argv[])
 {
+
+  LogComponentEnable ("MpTcpExample", LOG_LEVEL_INFO);
 
   Config::SetDefault ("ns3::Ipv4GlobalRouting::RandomEcmpRouting", BooleanValue (true));
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
@@ -40,7 +42,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::TcpSocketBase::EnableMpTcp", BooleanValue (true));
   Config::SetDefault ("ns3::MpTcpSocketBase::PathManagerMode",
                       EnumValue (MpTcpSocketBase::FullMesh));
- // Config::SetDefault ("ns3::MpTcpNdiffPorts::MaxSubflows", UintegerValue (1));
+  // Config::SetDefault ("ns3::MpTcpNdiffPorts::MaxSubflows", UintegerValue (1));
 
   //Enable LTE
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (false));
@@ -49,7 +51,7 @@ main (int argc, char *argv[])
 
   //Variables Declaration
   uint16_t port = 999;
-  uint32_t maxBytes = 0;
+  uint32_t maxBytes = 10000;
   //uint32_t sentPackets = 0;
   //uint32_t receivedPackets = 0;
   //uint32_t lostPackets = 0;
@@ -63,16 +65,16 @@ main (int argc, char *argv[])
   NodeContainer relay; // NodeContainer for relay
   relay.Create (3);
   internet.Install (relay);
-  NodeContainer host; // NodeContainer for source and destination
-  host.Create (2);
-  internet.Install (host);
+  NodeContainer nc_host; // NodeContainer for source and destination
+  nc_host.Create (2);
+  internet.Install (nc_host);
   NodeContainer enb;
   enb.Create (1);
   internet.Install (enb);
 
   MobilityHelper mobility;
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  mobility.Install (host);
+  mobility.Install (nc_host);
   mobility.Install (relay);
   mobility.Install (enb);
   /////////////////////creating toplogy////////////////
@@ -82,12 +84,12 @@ main (int argc, char *argv[])
   NodeContainer e0r0 = NodeContainer (enb.Get (0), relay.Get (0));
   NodeContainer e0r1 = NodeContainer (enb.Get (0), relay.Get (1));
   NodeContainer e0r2 = NodeContainer (enb.Get (0), relay.Get (2));
-  NodeContainer e0h1 = NodeContainer (enb.Get (0), host.Get (1));
-  NodeContainer e0h0 = NodeContainer (enb.Get (0), host.Get (0));
+  NodeContainer e0h1 = NodeContainer (enb.Get (0), nc_host.Get (1));
+  NodeContainer e0h0 = NodeContainer (enb.Get (0), nc_host.Get (0));
 
-  NodeContainer r0h1 = NodeContainer (relay.Get (0), host.Get (1));
-  NodeContainer r1h1 = NodeContainer (relay.Get (1), host.Get (1));
-  NodeContainer r2h1 = NodeContainer (host.Get (1), relay.Get (2));
+  NodeContainer r0h1 = NodeContainer (relay.Get (0), nc_host.Get (1));
+  NodeContainer r1h1 = NodeContainer (relay.Get (1), nc_host.Get (1));
+  NodeContainer r2h1 = NodeContainer (nc_host.Get (1), relay.Get (2));
 
   //Install an LTE protocol stack on the eNB(s) and ue(s)
 
@@ -95,7 +97,7 @@ main (int argc, char *argv[])
   enbDevs = lteHelper->InstallEnbDevice (enb);
   NetDeviceContainer ueDevs;
   ueDevs = lteHelper->InstallUeDevice (relay);
-  ueDevs = lteHelper->InstallUeDevice (host);
+  ueDevs = lteHelper->InstallUeDevice (nc_host);
 
   //Attach the UEs to an eNB. This will configure each UE according to the eNB configuration, and create an RRC connection between them:
 
@@ -109,16 +111,18 @@ main (int argc, char *argv[])
 
   PointToPointHelper p2p;
 
-  p2p.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
-  p2p.SetChannelAttribute ("Delay", StringValue ("1ms"));
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("1ns"));
   NetDeviceContainer l0e0r0 = p2p.Install (e0r0);
   NetDeviceContainer l1e0r1 = p2p.Install (e0r1);
   NetDeviceContainer l2e0r2 = p2p.Install (e0r2);
   //NetDeviceContainer l3e0h1 = p2p.Install (e0h1);
+ 
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
   NetDeviceContainer l4e0h0 = p2p.Install (e0h0);
 
-  p2p.SetDeviceAttribute ("DataRate", StringValue ("1Mbps"));
-  p2p.SetChannelAttribute ("Delay", StringValue ("1ms"));
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("1ns"));
 
   NetDeviceContainer l5r0h1 = p2p.Install (r0h1);
   NetDeviceContainer l6r1h1 = p2p.Install (r1h1);
@@ -169,33 +173,57 @@ main (int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
   NS_LOG_INFO ("Create applications.");
 
+  int source = 0;
   //Create OnOff Application
+  if (source == 0)
+    {
 
-  //Create BulkSend Application to send Tcp packets  //
+      OnOffHelper onOffSource = OnOffHelper (
+          "ns3::TcpSocketFactory",
+          InetSocketAddress (i7r2h1.GetAddress (0), port)); //link from router1 to host1
 
-  OnOffHelper oo =
-      OnOffHelper ("ns3::TcpSocketFactory",
-                   InetSocketAddress (i7r2h1.GetAddress (0), port)); //link from router1 to host1
+      //Set the amount of data to send in bytes.  Zero is unlimited.
+      onOffSource.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
+      onOffSource.SetAttribute ("PacketSize", UintegerValue (1000));
 
-  //Set the amount of data to send in bytes.  Zero is unlimited.
-  oo.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
-  oo.SetAttribute ("PacketSize", UintegerValue (1000));
-  oo.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
-  oo.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
-  oo.SetAttribute ("DataRate", DataRateValue (DataRate ("1000kb/s")));
+      onOffSource.SetConstantRate (DataRate ("10Mbps"));
 
-  ApplicationContainer SourceApp = oo.Install (host.Get (0));
-  SourceApp.Start (Seconds (0.0));
-  SourceApp.Stop (Seconds (10.0));
+      ApplicationContainer SourceApp = onOffSource.Install (nc_host.Get (0));
+      SourceApp.Start (NanoSeconds (0.0));
+      SourceApp.Stop (Seconds (10.0));
 
-  //Create a packet sink to receive packets.
+      //Create a packet sink to receive packets.
 
-  PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory",
-                                     InetSocketAddress (Ipv4Address::GetAny (), port));
-  ApplicationContainer SinkApp = packetSinkHelper.Install (host.Get (1));
+      PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory",
+                                         InetSocketAddress (Ipv4Address::GetAny (), port));
+      ApplicationContainer SinkApp = packetSinkHelper.Install (nc_host.Get (1));
 
-  SinkApp.Start (Seconds (0.0));
-  SinkApp.Stop (Seconds (10.0));
+      SinkApp.Start (NanoSeconds (0.0));
+      SinkApp.Stop (Seconds (10.0));
+
+      // Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (SinkApp.Get (0));
+      // std::cout << "Total Bytes Received: " << sink1->GetTotalRx () << std::endl;
+    }
+  else //echoserver
+    {
+
+      UdpEchoServerHelper echoServer (9);
+
+      ApplicationContainer serverApps = echoServer.Install (nc_host.Get (1));
+      serverApps.Start (NanoSeconds (1.0));
+      serverApps.Stop (Seconds (10.0));
+
+      UdpEchoClientHelper echoClient (i7r2h1.GetAddress (0), 9);
+      echoClient.SetAttribute ("MaxPackets", UintegerValue (1000));
+      echoClient.SetAttribute ("Interval", TimeValue (NanoSeconds (.01)));
+      echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+
+      ApplicationContainer clientApps = echoClient.Install (nc_host.Get (0));
+      clientApps.Start (NanoSeconds (2.0));
+      clientApps.Stop (Seconds (10.0));
+      //       Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (serverApps.Get (0));
+      // std::cout << "Total Bytes Received: " << sink1->GetTotalRx () << std::endl;
+    }
 
   //=========== Start the simulation ===========//
 
@@ -206,45 +234,22 @@ main (int argc, char *argv[])
   AsciiTraceHelper ascii;
   p2p.EnableAsciiAll (ascii.CreateFileStream ("tracemetrics/mptcp-example.tr"));
 
-  AnimationInterface anim ("netanim/mptcp-example-default2+lte.xml");
+  AnimationInterface anim ("netanim/mptcp-example.xml");
 
   //NodeContainer for spine switches
 
   anim.SetConstantPosition (relay.Get (0), 0.0, 20.0);
   anim.SetConstantPosition (relay.Get (1), 25.0, 20.0);
   anim.SetConstantPosition (relay.Get (2), 75.0, 20.0);
-  anim.SetConstantPosition (host.Get (0), 75.0, 0.0);
+  anim.SetConstantPosition (nc_host.Get (0), 75.0, 0.0);
   anim.SetConstantPosition (enb.Get (0), 50.0, 0.0);
-  anim.SetConstantPosition (host.Get (1), 50.0, 100.0);
+  anim.SetConstantPosition (nc_host.Get (1), 50.0, 100.0);
 
-  
-
-  FlowMonitorHelper flowmon;
-  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
-
-  p2p.EnablePcapAll ("pcap/isaac-p2pCapmptcp");
+  p2p.EnablePcapAll ("pcap/mptcp-example-p2p");
 
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Stop (Seconds (10.0));
   Simulator::Run ();
-
-  monitor->CheckForLostPackets ();
-  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
-  std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
-  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin ();
-       i != stats.end (); ++i)
-    {
-      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-      std::cout << "Flow " << i->first - 2 << " (" << t.sourceAddress << " -> "
-                << t.destinationAddress << ")\n";
-      std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-      std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / 8.0 / 1024 / 1024 << " Mbps\n";
-      std::cout << "  Tx Packets:   " << i->second.txPackets << "\n";
-      std::cout << "  Rx Packets:   " << i->second.rxPackets << "\n";
-      std::cout << "  Delay Sum:   " << i->second.delaySum << "\n";
-      std::cout << "  Average Delay:   " << i->second.delaySum / i->second.rxPackets << "\n";
-    }
 
   NS_LOG_INFO ("Done.");
 
@@ -253,7 +258,5 @@ main (int argc, char *argv[])
 
   Simulator::Destroy ();
 
-  Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (SinkApp.Get (0));
-  std::cout << "Total Bytes Received: " << sink1->GetTotalRx () << std::endl;
   return 0;
 }

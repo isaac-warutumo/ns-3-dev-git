@@ -58,7 +58,7 @@ main (int argc, char *argv[])
   // Explicitly create the point-to-point link required by the topology (shown above).
   //
   PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ns"));
 
   NetDeviceContainer devices;
@@ -100,21 +100,21 @@ main (int argc, char *argv[])
   //
   PacketSinkHelper sink ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), port));
   ApplicationContainer sinkApps = sink.Install (nodes.Get (1));
-  sinkApps.Start (NanoSeconds (2.0));
+  sinkApps.Start (NanoSeconds (0.0));
   sinkApps.Stop (Seconds (20.0));
 
   //
   // Set up tracing if enabled
   //
   AsciiTraceHelper ascii;
-  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("tracemetrics/trace-file-name.tr");
+  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("tracemetrics/tcp-bulk-send.tr");
   pointToPoint.EnableAscii (stream, devices);
+  // pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tracemetrics/tcp-bulk-send.tr"));
 
-  //pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tcp-bulk-send1024000.tr"));
-  //pointToPoint.EnablePcapAll ("tcp-bulk-send1024000");
-  //ipv4.EnableAsciiIpv4All ("tcp-bulk-send1024000.tr");
+  pointToPoint.EnablePcapAll ("pcap/tcp-bulk-send");
 
-  AnimationInterface anim ("netanim/tcp-bulk-send1024000.xml");
+
+  AnimationInterface anim ("netanim/tcp-bulk-send.xml");
   anim.SetConstantPosition (nodes.Get (0), 10.0, 10.0);
   anim.SetConstantPosition (nodes.Get (1), 30.0, 10.0);
 
@@ -122,7 +122,7 @@ main (int argc, char *argv[])
   FlowMonitorHelper flowHelper;
   flowMonitor = flowHelper.InstallAll ();
 
-  Config::SetDefault ("ns3::ConfigStore::Filename", StringValue ("others/tcpbulksend1024000.txt"));
+  Config::SetDefault ("ns3::ConfigStore::Filename", StringValue ("others/tcpbulksend.txt"));
   Config::SetDefault ("ns3::ConfigStore::FileFormat", StringValue ("RawText"));
   Config::SetDefault ("ns3::ConfigStore::Mode", StringValue ("Save"));
   ConfigStore outputConfig2;
@@ -138,11 +138,11 @@ main (int argc, char *argv[])
   Simulator::Run ();
   cout << " ===2===" << endl; /*  */
 
-  flowMonitor->SerializeToXmlFile ("flowmon/tcp-bulk-sendflow.xml", true, true);
+  flowMonitor->SerializeToXmlFile ("flowmon/tcp-bulk-send.xml", true, true);
 
   Simulator::Destroy ();
   NS_LOG_INFO ("Done.");
 
   Ptr<PacketSink> sink1 = DynamicCast<PacketSink> (sinkApps.Get (0));
-  std::cout << "Total Bytes Received: " << sink1->GetTotalRx () << std::endl;
+  std::cout << "Total MegaBytes Received: " << sink1->GetTotalRx ()/pow(10,6) << std::endl;
 }

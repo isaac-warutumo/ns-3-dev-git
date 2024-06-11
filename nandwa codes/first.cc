@@ -1,26 +1,11 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/netanim-module.h" 
+#include "ns3/netanim-module.h"
 #include "ns3/flow-monitor-module.h"
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("FirstScriptExample");
@@ -30,14 +15,13 @@ main (int argc, char *argv[])
 {
   CommandLine cmd;
   cmd.Parse (argc, argv);
-  
+
   Time::SetResolution (Time::NS);
   //LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
-  LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+  //- ("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
   NodeContainer nodes;
   nodes.Create (2);
-
 
   PointToPointHelper pointToPoint;
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("1000Mbps"));
@@ -61,44 +45,27 @@ main (int argc, char *argv[])
   serverApps.Stop (Seconds (10.0));
 
   UdpEchoClientHelper echoClient (interfaces.GetAddress (1), 9);
-  echoClient.SetAttribute ("MaxPackets", UintegerValue (100));
-  echoClient.SetAttribute ("Interval", TimeValue (NanoSeconds (1.0)));
+  echoClient.SetAttribute ("MaxPackets", UintegerValue (10));
+  echoClient.SetAttribute ("Interval", TimeValue (MilliSeconds (1.0)));
   echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
 
   ApplicationContainer clientApps = echoClient.Install (nodes.Get (0));
-  clientApps.Start (NanoSeconds (2.0));
+  clientApps.Start (MilliSeconds (2.0));
   clientApps.Stop (Seconds (10.0));
-  
-  AnimationInterface anim("netanim/first-100packets.xml");
-  anim.SetConstantPosition (nodes.Get(0), 10.0, 10.0);
-  anim.SetConstantPosition (nodes.Get(1), 30.0, 10.0);
-  
+
+  AnimationInterface anim ("netanim/first.xml");
+  anim.SetConstantPosition (nodes.Get (0), 10.0, 10.0);
+  anim.SetConstantPosition (nodes.Get (1), 30.0, 10.0);
+
   AsciiTraceHelper ascii;
-  pointToPoint.EnableAsciiAll(ascii.CreateFileStream("tracemetrics/first-100packets.tr"));
- pointToPoint.EnablePcapAll("pcap/first-100packets"); 
-  
+  pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tracemetrics/first.tr"));
+  pointToPoint.EnablePcapAll ("pcap/first");
+
   FlowMonitorHelper flowmon;
-  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();  
+  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
 
   Simulator::Run ();
-  Simulator::Destroy();
  
-  
-  monitor->CheckForLostPackets ();
-  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
-  std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
-  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
-    {
-      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-      std::cout << "Flow " << i->first - 2 << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";           std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-      std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / 8.0 / 1024 / 1024  << " Mbps\n";
-      std::cout << "  Tx Packets:   " << i->second.txPackets << "\n";
-      std::cout << "  Rx Packets:   " << i->second.rxPackets << "\n";
-      std::cout << "  Delay Sum:   " << i->second.delaySum << "\n";
-      std::cout << "  Average Delay:   " << i->second.delaySum / i->second.rxPackets<< "\n";
-
-    }
-    
+ Simulator::Destroy ();
   return 0;
 }

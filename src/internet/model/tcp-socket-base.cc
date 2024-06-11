@@ -95,7 +95,7 @@ TcpSocketBase::GetTypeId (void)
                    MakeUintegerChecker<uint16_t> ())
     .AddAttribute ("EnableMpTcp",
                    "Enable or disable MPTCP support",
-                   BooleanValue (false),
+                   BooleanValue (true),
                    MakeBooleanAccessor (&TcpSocketBase::m_mptcpEnabled),
                    MakeBooleanChecker ())
     .AddAttribute ("IcmpCallback", "Callback invoked whenever an icmp error is received on this socket.",

@@ -18,7 +18,7 @@ NS_LOG_COMPONENT_DEFINE ("EcmpExample");
 int
 main (int argc, char *argv[])
 {
-  uint32_t ecmpMode = 2;
+
   uint32_t socket = 0;
 
   //input parameters
@@ -28,10 +28,6 @@ main (int argc, char *argv[])
   int relay_distance = 5; //range (5,50)m
   int tbr = 5; //range (5,15)%
   int rx_buffer_size = 25; //range (25,75)%
-
-  //Variables Declaration
-  uint16_t port = 999;
-  uint32_t maxBytes = 1048576; //1MBs
 
   // Allow the user to override any of the defaults and the above
   // Bind ()s at run-time, via command-line arguments
@@ -45,11 +41,11 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::Ipv4GlobalRouting::RandomEcmpRouting", BooleanValue (true));
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpNewReno"));
   Config::SetDefault ("ns3::BulkSendApplication::SendSize", UintegerValue (512));
-
+  
   //Enable MPTCP
   Config::SetDefault ("ns3::TcpSocketBase::EnableMpTcp", BooleanValue (true));
   Config::SetDefault ("ns3::MpTcpSocketBase::PathManagerMode",
-                      EnumValue (MpTcpSocketBase::nDiffPorts));
+                      EnumValue (MpTcpSocketBase::FullMesh));
 
   //display the input parameters
   cout << "No of Relays: " << no_relays << endl;
@@ -131,6 +127,8 @@ main (int argc, char *argv[])
   NetDeviceContainer d4d5 = p2p.Install (n4n5);
   NetDeviceContainer d4d6 = p2p.Install (n4n6);
 
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+
   NetDeviceContainer d5d7 = p2p.Install (n5n7);
   NetDeviceContainer d6d7 = p2p.Install (n6n7);
 
@@ -179,7 +177,7 @@ main (int argc, char *argv[])
       uint16_t port = 9; // Discard port (RFC 863)
       OnOffHelper onoff ("ns3::UdpSocketFactory",
                          InetSocketAddress (Ipv4Address ("10.5.7.2"), port));
-      onoff.SetConstantRate (DataRate ("100kbps"));
+      onoff.SetConstantRate (DataRate ("10Mbps"));
       onoff.SetAttribute ("PacketSize", UintegerValue (500));
 
       ApplicationContainer apps;
@@ -203,6 +201,37 @@ main (int argc, char *argv[])
 
       ApplicationContainer sourceApps;
       for (uint32_t i = 0; i < 5; i++)
+        {
+          sourceApps.Add (source.Install (c.Get (0)));
+        }
+
+      sourceApps.Start (Seconds (0.0));
+      sourceApps.Stop (Seconds (1.0));
+
+      PacketSinkHelper sink ("ns3::TcpSocketFactory",
+                             InetSocketAddress (Ipv4Address::GetAny (), port));
+      ApplicationContainer sinkApps = sink.Install (c.Get (7));
+    }
+    else{
+      uint16_t port = 1500;
+      uint16_t maxBytes =0;//unlimited
+
+      //tcp source
+      cout << "TCP: OnOffHelper source - 1 app" << endl;
+      OnOffHelper source =
+          OnOffHelper ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address ("10.6.7.2"), port));
+
+      //Set the amount of data to send in bytes.  Zero is unlimited.
+      source.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
+      source.SetAttribute ("PacketSize", UintegerValue (500));
+      source.SetConstantRate (DataRate ("30.22Mbps"));
+      source.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
+      source.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.01]"));
+      //source.SetAttribute ("DataRate", DataRateValue (DataRate ("10000kb/s")));
+
+      ApplicationContainer sourceApps;
+
+     for (uint32_t i = 0; i < 5; i++)
         {
           sourceApps.Add (source.Install (c.Get (0)));
         }

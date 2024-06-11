@@ -226,5 +226,11 @@ Cluster::getMinSubSumRelays ()
 int
 Cluster::getMaxSubSumRelays ()
 {
+  // if (m_maxSubSumRelays > 4)
+
+  //   {
+  //     m_maxSubSumRelays = 4;
+  //   }
+
   return m_maxSubSumRelays;
 }

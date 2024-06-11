@@ -23,6 +23,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/ssid.h"
+#include "ns3/netanim-module.h"
 
 // Default Network Topology
 //
@@ -119,20 +120,22 @@ main (int argc, char *argv[])
 
   MobilityHelper mobility;
 
-  mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                 "MinX", DoubleValue (0.0),
-                                 "MinY", DoubleValue (0.0),
-                                 "DeltaX", DoubleValue (5.0),
-                                 "DeltaY", DoubleValue (10.0),
-                                 "GridWidth", UintegerValue (3),
-                                 "LayoutType", StringValue ("RowFirst"));
+  // mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+  //                                "MinX", DoubleValue (0.0),
+  //                                "MinY", DoubleValue (0.0),
+  //                                "DeltaX", DoubleValue (5.0),
+  //                                "DeltaY", DoubleValue (10.0),
+  //                                "GridWidth", UintegerValue (3),
+  //                                "LayoutType", StringValue ("RowFirst"));
 
-  mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-                             "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
-  mobility.Install (wifiStaNodes);
+  // mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+  //                            "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
+  // mobility.Install (wifiStaNodes);
 
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (wifiApNode);
+  mobility.Install (wifiStaNodes);
+  mobility.Install (csmaNodes);
 
   InternetStackHelper stack;
   stack.Install (csmaNodes);
@@ -180,10 +183,22 @@ main (int argc, char *argv[])
       csma.EnablePcap ("third", csmaDevices.Get (0), true);
     }
 
+    AnimationInterface anim ("netanim/scratch-simulator.xml");
+    for (size_t i = 0; i < nWifi; i++)
+    {
+      anim.SetConstantPosition(wifiStaNodes.Get (i),5,i*5);
+    }
+    
+    for (size_t i = 1; i <=nCsma; i++)
+    {
+       anim.SetConstantPosition(csmaNodes.Get (i),(nWifi+i)*5,30);
+    }
+    anim.SetConstantPosition(wifiApNode.Get(0),10,nWifi*5);
+    anim.SetConstantPosition(p2pNodes.Get(0),15,nWifi*4);
+    anim.SetConstantPosition(csmaNodes.Get(0),20,nWifi*6);
+    
+
   Simulator::Run ();
-
-
-
   Simulator::Destroy ();
   return 0;
 }
